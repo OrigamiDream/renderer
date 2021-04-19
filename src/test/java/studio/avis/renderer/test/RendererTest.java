@@ -106,19 +106,6 @@ public class RendererTest {
     }
 
     @TestConfiguration
-    public static class RendererConfigTest {
-
-        @Bean
-        public RendererRegistry rendererRegistry() {
-            RendererRegistry registry = new RendererRegistry();
-            registry.registerRenderer(new TableRowRenderer());
-            registry.registerRenderer(new DisplayNameRenderer());
-            return registry;
-        }
-
-    }
-
-    @TestConfiguration
     public static class I18NConfigTest {
 
         @Bean
