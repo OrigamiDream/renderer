@@ -30,38 +30,4 @@ public interface Renderer<T> {
         return a != null && a.length() > 0 ? a : b;
     }
 
-    default void addAttribute(BaseComponent baseComponent, String attribute) {
-        addAttribute(baseComponent, attribute, null, false);
-    }
-
-    default void addAttribute(BaseComponent baseComponent, String attribute, String value) {
-        addAttribute(baseComponent, attribute, value, false);
-    }
-
-    default void addAttribute(BaseComponent baseComponent, String attribute, BaseComponent value, RenderingAttribute renderingAttribute) {
-        addAttribute(baseComponent, attribute, value, false, renderingAttribute);
-    }
-
-    default void addAttribute(BaseComponent baseComponent, String attribute, BaseComponent value, boolean limited, RenderingAttribute renderingAttribute) {
-        addAttribute(baseComponent, attribute, value.toString(renderingAttribute.getHttpServletRequest()), limited);
-    }
-
-    default BaseComponent parseExpression(String input) {
-        if(input.startsWith("{") && input.endsWith("}")) {
-            return new TranslatableComponent(input.replace("{", "").replace("}", ""));
-        } else {
-            return new TextComponent(input);
-        }
-    }
-
-    default void addAttribute(BaseComponent baseComponent, String attribute, String value, boolean limited) {
-        if((value != null && value.length() > 0) || !limited) {
-            StringBuilder builder = new StringBuilder();
-            builder.append(" ").append(attribute);
-            if(value != null) {
-                builder.append("=\"").append(value).append("\"");
-            }
-            baseComponent.add(new TextComponent(builder.toString()));
-        }
-    }
 }

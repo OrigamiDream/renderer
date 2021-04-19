@@ -5,10 +5,9 @@ import studio.avis.renderer.ComponentRenderer;
 import studio.avis.renderer.Renderer;
 import studio.avis.renderer.RendererField;
 import studio.avis.renderer.RenderingAttribute;
+import studio.avis.renderer.TagBuilder;
 import studio.avis.renderer.annotations.Input;
 import studio.avis.renderer.components.BaseComponent;
-import studio.avis.renderer.components.Component;
-import studio.avis.renderer.components.TextComponent;
 
 public class InputRenderer implements Renderer<Object> {
 
@@ -24,20 +23,19 @@ public class InputRenderer implements Renderer<Object> {
         }
 
         String name = input.name().isEmpty() ? field.getFieldName() : input.name();
+        TagBuilder builder = TagBuilder.builder("input", true);
 
-        BaseComponent baseComponent = new Component();
-        baseComponent.add(new TextComponent("<input"));
+        builder.attribute("name", name)
+                .attribute("id", input.id(), true)
+                .attribute("type", input.type())
+                .attribute("placeholder", input.placeholder(), true)
+                .attribute("class", input.classappend(), true);
 
-        addAttribute(baseComponent, "name", name);
-        addAttribute(baseComponent, "id", input.id(), true);
-        addAttribute(baseComponent, "type", input.type());
-        addAttribute(baseComponent, "placeholder", parseExpression(input.placeholder()), true, attribute);
-        addAttribute(baseComponent, "class", input.classappend(), true);
         if(input.checked()) {
-            addAttribute(baseComponent, "checked");
+            builder.attribute("checked");
         }
         if(input.readonly()) {
-            addAttribute(baseComponent, "readonly");
+            builder.attribute("readonly");
         }
 
         if(field.getFieldType() != MultipartFile.class) {
@@ -45,10 +43,9 @@ public class InputRenderer implements Renderer<Object> {
             if(value == null || value.isEmpty() || input.type().equalsIgnoreCase("radio") || input.type().equalsIgnoreCase("checkbox")) {
                 value = input.value();
             }
-            addAttribute(baseComponent, "value", value);
+            builder.attribute("value", value);
         }
-        baseComponent.add(new TextComponent(">"));
-        return baseComponent;
+        return builder.build(attribute);
     }
 
 }

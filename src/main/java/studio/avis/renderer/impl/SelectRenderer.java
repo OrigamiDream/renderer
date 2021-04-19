@@ -4,11 +4,10 @@ import studio.avis.renderer.ComponentRenderer;
 import studio.avis.renderer.Renderer;
 import studio.avis.renderer.RendererField;
 import studio.avis.renderer.RenderingAttribute;
+import studio.avis.renderer.TagBuilder;
 import studio.avis.renderer.annotations.Option;
 import studio.avis.renderer.annotations.Select;
 import studio.avis.renderer.components.BaseComponent;
-import studio.avis.renderer.components.Component;
-import studio.avis.renderer.components.TextComponent;
 import studio.avis.renderer.components.TranslatableComponent;
 
 import java.util.Arrays;
@@ -30,14 +29,11 @@ public class SelectRenderer implements Renderer<Object> {
 
         String name = chooseOr(field.getFieldName(), select.name());
 
-        BaseComponent baseComponent = new Component();
-        baseComponent.add(new TextComponent("<select"));
+        TagBuilder parent = TagBuilder.builder("select");
 
-        addAttribute(baseComponent, "name", name);
-        addAttribute(baseComponent, "id", select.id(), true);
-        addAttribute(baseComponent, "class", select.classappend(), true);
-
-        baseComponent.add(new TextComponent(">"));
+        parent.attribute("name", name)
+                .attribute("id", select.id(), true)
+                .attribute("class", select.classappend(), true);
 
         List<Option> options;
         if(attribute.contains(SELECT_ATTRIBUTE_OPTIONS)) {
@@ -47,10 +43,10 @@ public class SelectRenderer implements Renderer<Object> {
         }
 
         for(Option option : options) {
-            Component optionComponent = new Component("<option");
-            addAttribute(optionComponent, "value", option.value());
+            TagBuilder child = TagBuilder.builder("option");
+            child.attribute("value", option.value());
             if(option.disabled()) {
-                addAttribute(optionComponent, "disabled");
+                child.attribute("disabled");
             }
 
             String value = field.getValue().toString();
@@ -58,15 +54,12 @@ public class SelectRenderer implements Renderer<Object> {
                 value = select.selected();
             }
             if(value.equalsIgnoreCase(option.value())) {
-                addAttribute(optionComponent, "selected");
+                child.attribute("selected");
             }
-            optionComponent.add(">").add(new TranslatableComponent(option.text())).add("</option>");
-
-            baseComponent.add(optionComponent);
+            child.text(new TranslatableComponent(option.text()));
+            parent.html(child);
         }
-
-        baseComponent.add(new TextComponent("</select>"));
-        return baseComponent;
+        return parent.build(attribute);
     }
 
 }

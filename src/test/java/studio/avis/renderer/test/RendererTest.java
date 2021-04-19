@@ -76,17 +76,17 @@ public class RendererTest {
         @Override
         public BaseComponent render(ComponentRenderer renderer, RenderingAttribute attribute, RendererRequest component, RendererField field) {
             BaseComponent rendered = renderer.render(attribute.getHttpServletRequest(), component, field.getField(), Input.class);
-            BaseComponent button = new Component("<button");
+            TagBuilder builder = TagBuilder.builder("button");
             String textKey;
             if(component.isDisplayNameDuplicationValidation()) {
-                addAttribute(button, "class", "success");
+                builder.attribute("class", "success");
                 textKey = "junit.button.available";
             } else {
-                addAttribute(button, "class", "blue");
+                builder.attribute("class", "blue");
                 textKey = "junit.button.available.check";
             }
-            button.addAll(new TextComponent(">"), new TranslatableComponent(textKey), new TextComponent("</button>"));
-            return new Component(rendered, new TextComponent(" "), button);
+            builder.text(new TranslatableComponent(textKey));
+            return new Component(rendered, new TextComponent(" "), builder.build(attribute));
         }
 
     }
