@@ -17,13 +17,6 @@ public interface Renderer<T> {
     BaseComponent render(ComponentRenderer renderer, RenderingAttribute attribute, T component, RendererField field);
 
     /**
-     * Returns "b" if "a" is null.
-     */
-    default <T> T chooseOr(T a, T b) {
-        return a != null ? a : b;
-    }
-
-    /**
      * Returns "b" if "a" is null or empty (zero-length).
      */
     default String chooseOr(String a, String b) {

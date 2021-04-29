@@ -8,6 +8,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.support.RequestContextUtils;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -19,13 +20,15 @@ public class TranslatableComponent implements BaseComponent {
     private final Object[] extra;
 
     public TranslatableComponent(String key) {
-        this.key = key;
-        this.extra = new Object[0];
+        this(key, new Object[0]);
     }
 
     public TranslatableComponent(String key, Object... extra) {
+        Objects.requireNonNull(key, "Translatable key should not be null.");
         this.key = key;
-        this.extra = extra;
+        this.extra = Arrays.stream(extra != null ? extra : new Object[0])
+                .filter(Objects::nonNull)
+                .toArray();
     }
 
     public String getKey() {
@@ -45,19 +48,9 @@ public class TranslatableComponent implements BaseComponent {
             WebApplicationContext context = contextOptional.get();
             MessageSource messageSource = context.getBean(MessageSource.class);
             try {
-                String message = messageSource.getMessage(getKey(), null, locale);
+                String message = messageSource.getMessage(getKey(), extra, locale);
                 if(message.isEmpty()) {
                     return key;
-                }
-                if(extra != null) {
-                    for(int i = 0; i < extra.length; i++) {
-                        Object object = extra[i];
-                        if(object instanceof BaseComponent) {
-                            message = message.replace("{" + i + "}", ((BaseComponent) object).toString(locale));
-                        } else {
-                            message = message.replace("{" + i + "}", object.toString());
-                        }
-                    }
                 }
                 return message;
             } catch(NoSuchMessageException e) {

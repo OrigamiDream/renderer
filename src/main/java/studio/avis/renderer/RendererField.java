@@ -29,10 +29,6 @@ public class RendererField {
         return field.getType();
     }
 
-    public <T> Class<T> getFieldType(Class<T> type) {
-        return (Class<T>) field.getType();
-    }
-
     public Object getValue() {
         return value;
     }

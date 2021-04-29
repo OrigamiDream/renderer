@@ -2,6 +2,8 @@ package studio.avis.renderer;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.WebApplicationContext;
+import org.springframework.web.servlet.support.RequestContextUtils;
 import studio.avis.renderer.annotations.RendererAttribute;
 import studio.avis.renderer.annotations.RendererAttributes;
 import studio.avis.renderer.components.BaseComponent;
@@ -34,16 +36,12 @@ import java.util.stream.Stream;
 @Component
 public class ComponentRendererImpl implements ComponentRenderer {
 
-    private static ComponentRenderer instance;
-
     private final Map<Class<? extends Renderer>, Renderer> cachedRenderers = new HashMap<>();
 
-    public ComponentRendererImpl() {
-        instance = this;
-    }
+    private final ApplicationContext applicationContext;
 
-    public static ComponentRenderer getInstance() {
-        return instance;
+    public ComponentRendererImpl(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
     }
 
     enum FieldAnnotationInvalidError {
@@ -66,9 +64,8 @@ public class ComponentRendererImpl implements ComponentRenderer {
             Field field = component.getClass().getDeclaredField(fieldName);
             return render(httpServletRequest, component, field, attributes, specificAnnotation, specificRendererType);
         } catch (NoSuchFieldException e) {
-            e.printStackTrace();
+            throw new IllegalArgumentException("Field name '" + fieldName + "' is not existed in '" + component.getClass().getSimpleName() + "'.");
         }
-        return null;
     }
 
     @Override
@@ -82,9 +79,8 @@ public class ComponentRendererImpl implements ComponentRenderer {
             field.setAccessible(true);
             return renderField(new RenderingAttribute(httpServletRequest, attributes != null ? attributes : new HashMap<>()), field, component, Optional.ofNullable(specificAnnotation), Optional.ofNullable(specificRendererType));
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            throw new IllegalArgumentException("Field '" + field.getName() + "' is not accessible to '" + component.getClass().getSimpleName() + "'.");
         }
-        return null;
     }
 
     @Override
@@ -206,7 +202,7 @@ public class ComponentRendererImpl implements ComponentRenderer {
         }
 
         if(rendererType.isPresent()) {
-            Optional<Renderer> renderer = findOrCreateRenderer(specificRendererType.orElse(rendererType.get()));
+            Optional<Renderer> renderer = findOrCreateRenderer(attribute.getHttpServletRequest(), specificRendererType.orElse(rendererType.get()));
             if(!renderer.isPresent()) {
                 throw new IllegalArgumentException("Renderer " + rendererType.get().getSimpleName() + " is not valid in registry.");
             }
@@ -234,9 +230,13 @@ public class ComponentRendererImpl implements ComponentRenderer {
         }
     }
 
-    private <T> Optional<T> findBean(Class<? extends T> type) {
+    private ApplicationContext getApplicationContext(HttpServletRequest request) {
+        return applicationContext;
+    }
+
+    private <T> Optional<T> findBean(HttpServletRequest request, Class<? extends T> type) {
         try {
-            return Optional.of(ApplicationContextProvider.getContext().getBean(type));
+            return Optional.ofNullable(getApplicationContext(request)).map(context -> context.getBean(type));
         } catch (Exception e) {
             return Optional.empty();
         }
@@ -252,24 +252,24 @@ public class ComponentRendererImpl implements ComponentRenderer {
         return Optional.empty();
     }
 
-    private Optional<Renderer> findOrCreateRenderer(Class<? extends Renderer> rendererType) {
+    private Optional<Renderer> findOrCreateRenderer(HttpServletRequest request, Class<? extends Renderer> rendererType) {
         if(cachedRenderers.containsKey(rendererType)) {
             return Optional.of(cachedRenderers.get(rendererType));
         }
-        Optional<Renderer> renderer = findOrCreateRenderer0(rendererType);
+        Optional<Renderer> renderer = findOrCreateRenderer0(request, rendererType);
         renderer.ifPresent(rd -> cachedRenderers.computeIfAbsent(rendererType, o -> rd));
         return renderer;
     }
 
-    private Optional<Renderer> findOrCreateRenderer0(Class<? extends Renderer> rendererType) {
-        if(ApplicationContextProvider.getContext() == null) {
-            return Optional.ofNullable(findOrCreateRendererConstructors(rendererType).orElseThrow(() -> new IllegalArgumentException("ApplicationContext is not available")));
+    private Optional<Renderer> findOrCreateRenderer0(HttpServletRequest request, Class<? extends Renderer> rendererType) {
+        if(getApplicationContext(request) == null) {
+            return Optional.ofNullable(findOrCreateRendererConstructors(request, rendererType).orElseThrow(() -> new IllegalArgumentException("ApplicationContext is not available")));
         }
-        Optional<Renderer> renderer = findBean(rendererType);
-        return renderer.isPresent() ? renderer : findOrCreateRendererConstructors(rendererType);
+        Optional<Renderer> renderer = findBean(request, rendererType);
+        return renderer.isPresent() ? renderer : findOrCreateRendererConstructors(request, rendererType);
     }
 
-    private Optional<Renderer> findOrCreateRendererConstructors(Class<? extends Renderer> rendererType) {
+    private Optional<Renderer> findOrCreateRendererConstructors(HttpServletRequest request, Class<? extends Renderer> rendererType) {
         Constructor<?>[] constructors = rendererType.getDeclaredConstructors();
         Optional<Constructor<?>> emptyConstructor = Arrays.stream(constructors)
                 .filter(constructor -> constructor.getParameterCount() == 0)
@@ -286,15 +286,10 @@ public class ComponentRendererImpl implements ComponentRenderer {
                 return null;
             });
         }
-        ApplicationContext context = ApplicationContextProvider.getContext();
-        if(context == null) {
-            throw new IllegalStateException("ApplicationContext is not valid.");
-        }
-
         for(Constructor<?> constructor : constructors) {
-            Stream<Optional<?>> stream = Arrays.stream(constructor.getParameterTypes()).map(this::findBean);
-            if(stream.allMatch(Optional::isPresent)) {
-                return (Optional<Renderer>) createInstanceFromConstructor(constructor, stream.map(Optional::get).toArray());
+            List<Optional<?>> stream = Arrays.stream(constructor.getParameterTypes()).map(type -> findBean(request, type)).collect(Collectors.toList());
+            if(stream.stream().allMatch(Optional::isPresent)) {
+                return (Optional<Renderer>) createInstanceFromConstructor(constructor, stream.stream().map(Optional::get).toArray());
             }
         }
         return Optional.empty();

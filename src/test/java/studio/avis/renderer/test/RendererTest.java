@@ -46,7 +46,7 @@ public class RendererTest {
     }
 
     @Data
-    class RendererRequest {
+    static class RendererRequest {
 
         @Input(id = "id_email", value = "Enter email here.")
         private String email = "";

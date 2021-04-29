@@ -9,6 +9,8 @@ import studio.avis.renderer.TagBuilder;
 import studio.avis.renderer.annotations.Input;
 import studio.avis.renderer.components.BaseComponent;
 
+import java.util.Optional;
+
 public class InputRenderer implements Renderer<Object> {
 
     public static final String INPUT_ATTRIBUTE = InputRenderer.class.getName() + ".attribute";
@@ -39,7 +41,10 @@ public class InputRenderer implements Renderer<Object> {
         }
 
         if(field.getFieldType() != MultipartFile.class) {
-            String value = field.getValue().toString();
+            String value = Optional.ofNullable(field.getValue())
+                    .map(Object::toString)
+                    .orElse(null);
+
             if(value == null || value.isEmpty() || input.type().equalsIgnoreCase("radio") || input.type().equalsIgnoreCase("checkbox")) {
                 value = input.value();
             }
