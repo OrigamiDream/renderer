@@ -89,6 +89,3 @@ private String language = "en";
 |value          |Required     |Option values
 |disabled       |false        |
 
-# TODO
-
-- Currently, renderer requires Renderer annotation-renderer implementation pair to render. I must remove the registry, make renderer detect annotation with specific class type and cache them all. 
